@@ -2,35 +2,35 @@ package handler
 
 import (
 	"crudproject/internal/models"
-	"crudproject/internal/service"
-	"fmt"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"net/http"
+	"strconv"
 )
 
 type CarHandler struct {
-	service service.CarService
+	DB *gorm.DB
 }
 
-func NewCarHandler(service service.CarService) *CarHandler {
-	return &CarHandler{service}
+func NewCarHandler(db *gorm.DB) *CarHandler {
+	return &CarHandler{DB: db}
 }
 
+// Мысал CRUD әдістері:
 func (h *CarHandler) GetAll(c *gin.Context) {
-	cars, err := h.service.GetAll()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch cars"})
+	var cars []models.Car
+	if err := h.DB.Find(&cars).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch cars"})
 		return
 	}
 	c.JSON(http.StatusOK, cars)
 }
 
 func (h *CarHandler) GetByID(c *gin.Context) {
-	// c.Param("id") мәнін uint типіне ауыстырып алу
-	id := parseID(c.Param("id"))
-	car, err := h.service.GetByID(id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Car not found"})
+	id, _ := strconv.Atoi(c.Param("id"))
+	var car models.Car
+	if err := h.DB.First(&car, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "car not found"})
 		return
 	}
 	c.JSON(http.StatusOK, car)
@@ -42,43 +42,33 @@ func (h *CarHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	created, err := h.service.Create(car)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create car"})
+	if err := h.DB.Create(&car).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create car"})
 		return
 	}
-	c.JSON(http.StatusCreated, created)
+	c.JSON(http.StatusCreated, car)
 }
 
 func (h *CarHandler) Update(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
 	var car models.Car
+	if err := h.DB.First(&car, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "car not found"})
+		return
+	}
 	if err := c.ShouldBindJSON(&car); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// Update by ID
-	car.ID = parseID(c.Param("id"))
-	updated, err := h.service.Update(car)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update car"})
-		return
-	}
-	c.JSON(http.StatusOK, updated)
+	h.DB.Save(&car)
+	c.JSON(http.StatusOK, car)
 }
 
 func (h *CarHandler) Delete(c *gin.Context) {
-	// c.Param("id") мәнін uint типіне ауыстырып алу
-	id := parseID(c.Param("id"))
-	if err := h.service.Delete(id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete car"})
+	id, _ := strconv.Atoi(c.Param("id"))
+	if err := h.DB.Delete(&models.Car{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete car"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Car deleted"})
-}
-
-// parseID функциясы: id мәнін string-тен uint-ке ауыстырады
-func parseID(id string) uint {
-	var parsedID uint
-	fmt.Sscanf(id, "%d", &parsedID)
-	return parsedID
+	c.JSON(http.StatusOK, gin.H{"message": "car deleted"})
 }

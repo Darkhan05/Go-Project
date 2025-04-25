@@ -192,6 +192,7 @@ func NewCarRepository(db *gorm.DB) *CarRepository {
 return &CarRepository{DB: db}
 }
 
+
 func (r *CarRepository) CreateCar(car *models.Car) error {
 return r.DB.Create(car).Error
 }
