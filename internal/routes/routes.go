@@ -1,7 +1,9 @@
 package routes
 
 import (
+	"crudproject/internal/auth"
 	"crudproject/internal/handler"
+	"crudproject/internal/middleware"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -9,9 +11,22 @@ import (
 func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	h := handler.NewCarHandler(db)
 
-	r.GET("/cars", h.GetAll)
-	r.GET("/cars/:id", h.GetByID)
-	r.POST("/cars", h.Create)
-	r.PUT("/cars/:id", h.Update)
-	r.DELETE("/cars/:id", h.Delete)
+	// Auth Routes
+	authRoutes := r.Group("/auth")
+	{
+		authRoutes.POST("/register", auth.Register)
+		authRoutes.POST("/login", auth.Login)
+		authRoutes.GET("/me", middleware.AuthRequired(), auth.Me)
+	}
+
+	// Car Routes (Protected)
+	carRoutes := r.Group("/cars")
+	carRoutes.Use(middleware.AuthRequired()) // 👈 тек токен арқылы кіреді
+	{
+		carRoutes.GET("/", h.GetAll)
+		carRoutes.GET("/:id", h.GetByID)
+		carRoutes.POST("/", h.Create)
+		carRoutes.PUT("/:id", h.Update)
+		carRoutes.DELETE("/:id", h.Delete)
+	}
 }

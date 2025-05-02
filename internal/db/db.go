@@ -65,7 +65,7 @@ func InitDB() {
 		log.Fatal("gorm.Open error:", err)
 	}
 
-	err = gormDB.AutoMigrate(&models.Car{})
+	err = gormDB.AutoMigrate(&models.User{})
 	if err != nil {
 		log.Fatal("AutoMigrate error:", err)
 	}
