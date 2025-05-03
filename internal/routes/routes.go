@@ -9,24 +9,23 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine, db *gorm.DB) {
-	h := handler.NewCarHandler(db)
+	authHandler := auth.NewAuthHandler(db)
+	carHandler := handler.NewCarHandler(db)
 
-	// Auth Routes
 	authRoutes := r.Group("/auth")
 	{
-		authRoutes.POST("/register", auth.Register)
-		authRoutes.POST("/login", auth.Login)
-		authRoutes.GET("/me", middleware.AuthRequired(), auth.Me)
+		authRoutes.POST("/register", authHandler.Register)
+		authRoutes.POST("/login", authHandler.Login)
 	}
 
-	// Car Routes (Protected)
 	carRoutes := r.Group("/cars")
-	carRoutes.Use(middleware.AuthRequired()) // 👈 тек токен арқылы кіреді
+	carRoutes.Use(middleware.AuthRequired())
 	{
-		carRoutes.GET("/", h.GetAll)
-		carRoutes.GET("/:id", h.GetByID)
-		carRoutes.POST("/", h.Create)
-		carRoutes.PUT("/:id", h.Update)
-		carRoutes.DELETE("/:id", h.Delete)
+		carRoutes.GET("/", carHandler.GetAll)
+		carRoutes.GET("/:id", carHandler.GetByID)
+
+		carRoutes.POST("/", middleware.AdminOnly(), carHandler.Create)
+		carRoutes.PUT("/:id", middleware.AdminOnly(), carHandler.Update)
+		carRoutes.DELETE("/:id", middleware.AdminOnly(), carHandler.Delete)
 	}
 }

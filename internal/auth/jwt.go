@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"crudproject/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
 	"time"
@@ -8,10 +9,12 @@ import (
 
 var secret = []byte("your-secret-key")
 
-func GenerateJWT(userID uint) (string, error) {
+func GenerateJWT(user models.User) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": userID,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
+		"user_id":  user.ID,
+		"username": user.Username,
+		"role":     user.Role,
+		"exp":      time.Now().Add(72 * time.Hour).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(secret)
